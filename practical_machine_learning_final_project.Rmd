@@ -1,0 +1,127 @@
+---
+title: "Practical Machine Learning final project"
+author: "Mikael Lindstrom"
+date: "July 16, 2016"
+output: html_document
+---
+
+
+#Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. The data is generated from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+The data comes from http://groupware.les.inf.puc-rio.br/har.
+
+The goal is to use the ata to predict the manner in which they did the exercise. 
+
+# Data
+
+# Loading
+
+Libraries used for this project are first loaded into R.
+
+```{r warning=FALSE, message=FALSE}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+set.seed(11111)
+```
+
+The training data and test data are loaded from the website.
+
+```{r}
+if (!file.exists("pml-training.csv")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+    destfile = "pml-training.csv")
+}
+if (!file.exists("pml-testing.csv")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+    destfile = "pml-testing.csv")
+}
+
+trainingSet <- read.csv("pml-training.csv",
+                        na.strings=c("NA","#DIV/0!",""))
+testingSet <- read.csv("pml-testing.csv",
+                       na.strings=c("NA","#DIV/0!",""))
+                    
+```
+
+#Cleaning
+
+The data is cleaned before it can be used:
+
+* Remove any variables containing all NAs
+* Remove any near zero variance columns
+* Remove the first 6 rows as they contain the id, participant timestamp etc.
+
+
+```{r}
+NACols<-colnames(testingSet)[colSums(is.na(testingSet)) > 0] 
+trainingSet<-trainingSet[,!(names(trainingSet) %in% NACols)]
+
+nzv <- nearZeroVar(trainingSet, saveMetrics=TRUE)
+trainingSet<-trainingSet[,nzv$nzv==FALSE]
+trainingSet<-trainingSet[,-(1:6)]
+```
+
+##Bootstrap
+
+```{r}
+inTrain <- createDataPartition(y=trainingSet$classe, p=0.7, list=FALSE)
+myTraining <- trainingSet[inTrain,]
+myTesting <- trainingSet[-inTrain,]
+dim(myTraining)
+dim(myTesting)
+```
+
+#Training
+
+
+
+# Random Forest
+
+```{r}
+modFitRF <- randomForest(classe ~ ., data=myTraining)
+print(modFitRF)
+```
+
+
+```{r}
+predRF <- predict(modFitRF, myTesting, type = "class")
+confMatrixRF<-confusionMatrix(predRF, myTesting$classe)
+print(confMatrixRF)
+```
+
+With out of the box random forest prediction, an accuracy of `r confMatrixRF$overall["Accuracy"]` was achieved.
+
+#Decision Tree
+
+```{r}
+modFitDT <- train(classe ~ ., data = myTraining, method="rpart")
+print(modFitDT)
+fancyRpartPlot(modFitDT$finalModel)
+
+```
+
+```{r}
+predDT <- predict(modFitDT, myTesting)
+confMatrixDT<-confusionMatrix(predDT, myTesting$classe)
+print(confMatrixDT)
+```
+
+With out of the box Decision Tree model, an accuracy of `r confMatrixDT$overall["Accuracy"]` was achieved, i.e. a lot lower than the random forest model.
+
+# Results
+
+Using random forest model achieved an accuracy of `r confMatrixRF$overall["Accuracy"]` and an expected out of sample error of `r 1-confMatrixRF$overall["Accuracy"]`.
+
+Predicting the results on the test data produced the following output:
+
+
+```{r}
+predicationsFinal<-predict(modFitRF, newdata=testingSet)
+print(predicationsFinal)
+```
+
