@@ -82,6 +82,8 @@ dim(myTesting)
 
 # Random Forest
 
+First trying random forest. Starting with out-of-the-box parameters.
+
 ```{r}
 modFitRF <- randomForest(classe ~ ., data=myTraining)
 print(modFitRF)
@@ -94,9 +96,11 @@ confMatrixRF<-confusionMatrix(predRF, myTesting$classe)
 print(confMatrixRF)
 ```
 
-With out of the box random forest prediction, an accuracy of `r confMatrixRF$overall["Accuracy"]` was achieved.
+With out of the box random forest prediction, an accuracy of `r confMatrixRF$overall["Accuracy"]` was achieved. I.e. very good (excellent even!).
 
 #Decision Tree
+
+Trying another model - Decision tree that is easier to visualize.
 
 ```{r}
 modFitDT <- train(classe ~ ., data = myTraining, method="rpart")
